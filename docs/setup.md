@@ -1,12 +1,14 @@
 # Local Setup
 
-This guide covers the FastAPI backend. Frontend, database, and Docker setup will
-be documented as those parts of the project are added.
+This guide covers the FastAPI backend and the React frontend. Database and
+Docker setup will be documented as issues #11 and #35 are completed.
 
 ## Prerequisites
 
 - Git
 - Python 3.12 (the version used by CI)
+
+The frontend uses Vite, which requires Node.js 20.19+ or 22.12+, and npm.
 
 ## Get the code
 
@@ -58,3 +60,17 @@ From the repository root:
 ```bash
 python -m pytest backend/tests -q
 ```
+
+## Run the frontend
+
+From the repository root:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite (usually `http://localhost:5173`). To create
+and preview a production build, run `npm run build` and then `npm run preview`
+from `frontend/`.
