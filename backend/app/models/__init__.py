@@ -6,3 +6,5 @@ from app.models.prerequisite import Prerequisite
 from app.models.program_requirement import ProgramRequirement
 from app.models.program_requirement_course import ProgramRequirementCourse
 from app.models.term import Term
+from app.models.usertable import User
+
