@@ -39,6 +39,18 @@ How sfucourses outline fields map to the `Course` model:
 
 Empty strings from the API are stored as `null`.
 
+The client that fetches this data is `SFUCoursesClient` in
+`backend/app/services/sfu_courses.py`. It retrieves outlines and parsed
+prerequisite trees, and returns descriptions as plain text. The provider URL and
+request timeout can be set with `SFU_COURSES_API_BASE_URL` and
+`SFU_COURSES_API_TIMEOUT_SECONDS`.
+
+For now, `GET /courses` (`backend/app/api/courses.py`) calls this client live and
+returns its shape (`dept`, `number`, `units`, no `id`). That is temporary: #14
+replaces it with a database-backed `GET /api/courses` in the shape described in
+[api-contracts.md](api-contracts.md), and the loader (#13) uses the client to fill
+the database. Don't build frontend code against the current `/courses` response.
+
 ## Data model
 
 ![ER diagram](er-diagram.png)

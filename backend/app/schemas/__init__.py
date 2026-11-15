@@ -1,4 +1,4 @@
-# app/schemas/__init__.py
+"""API response schemas."""
 from app.schemas.courses import CourseResponse, CourseSummary, ErrorResponse, PrerequisiteRead
 from app.schemas.plan import PlanCreate, PlanDetailResponse, PlanResponse, PlanUpdate
 from app.schemas.plan_courses import PlanCourseCreate, PlanCourseRead, PlanCourseUpdate
