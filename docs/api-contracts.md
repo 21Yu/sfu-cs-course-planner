@@ -13,8 +13,13 @@ schema name is listed with every endpoint.
   `alias_generator=to_camel`.
 - **IDs are integers.** The frontend's `Course.id` in `frontend/src/types/course.ts`
   is currently a `string` and should change to `number`.
+- **Plan slots.** A course in a plan is placed by `year` (`1`, `2`, `3`, ...) and
+  `season` (`"fall"`, `"spring"` or `"summer"`, lowercase), the same grid the
+  frontend shows. Within a year the order is fall, spring, summer. Plans don't
+  need real term codes.
 - **Term codes** are SFU's 4-digit codes: `1` + 2-digit year + starting month.
-  `1251` = Spring 2025, `1254` = Summer 2025, `1257` = Fall 2025.
+  `1251` = Spring 2025, `1254` = Summer 2025, `1257` = Fall 2025. A plan's optional
+  `startTermCode` uses this format so slots can be turned into real terms later.
 - **Timestamps** are ISO 8601 strings, e.g. `"2026-01-15T18:30:00Z"`.
 - **`null`** means a value is missing or doesn't apply, e.g. a course with no
   designation.
@@ -98,6 +103,9 @@ express every rule, such as "(A and B) or (C and D)" or minimum grades.
 
 #### `GET /terms`
 
+Lists SFU terms. Plans don't use this endpoint. It's kept for checking course
+offerings and for choosing a plan's `startTermCode`.
+
 Response `200`, a list of `TermRead`:
 
 ```json
@@ -123,6 +131,7 @@ Response `200`, a list of `PlanResponse`:
     "id": 7,
     "name": "Graduate in 4 years",
     "version": 3,
+    "startTermCode": 1257,
     "createdAt": "2026-01-15T18:30:00Z",
     "updatedAt": "2026-02-02T09:12:44Z"
   }
@@ -133,10 +142,11 @@ Response `200`, a list of `PlanResponse`:
 
 Creates a plan.
 
-Request, a `PlanCreate`. `name` is required, 1–255 characters:
+Request, a `PlanCreate`. `name` is required, 1–255 characters. `startTermCode`
+is optional and can be `null` or left out if the student hasn't picked a start term:
 
 ```json
-{ "name": "Graduate in 4 years" }
+{ "name": "Graduate in 4 years", "startTermCode": 1257 }
 ```
 
 Response `201`, a `PlanDetailResponse`. A new plan has an empty `planCourses` list.
@@ -153,12 +163,14 @@ Response `200`, a `PlanDetailResponse` (`PlanResponse` plus `planCourses`):
   "id": 7,
   "name": "Graduate in 4 years",
   "version": 3,
+  "startTermCode": 1257,
   "createdAt": "2026-01-15T18:30:00Z",
   "updatedAt": "2026-02-02T09:12:44Z",
   "planCourses": [
     {
       "id": 41,
-      "termCode": 1257,
+      "year": 1,
+      "season": "fall",
       "course": { "id": 12, "courseCode": "CMPT 225", "title": "Data Structures and Programming", "credits": 3 }
     }
   ]
@@ -167,12 +179,14 @@ Response `200`, a `PlanDetailResponse` (`PlanResponse` plus `planCourses`):
 
 #### `PATCH /plans/{plan_id}`
 
-Renames a plan.
+Renames a plan or changes its start term.
 
-Request, a `PlanUpdate`. `name` is required, 1–255 characters:
+Request, a `PlanUpdate`. `name` is required, 1–255 characters. `version` is
+required and must match the plan's current `version`. `startTermCode` is optional.
+Changing it doesn't move any courses, because they're stored by year and season:
 
 ```json
-{ "name": "Graduate in 5 years" }
+{ "name": "Graduate in 5 years", "version": 3, "startTermCode": 1267 }
 ```
 
 Response `200`, a `PlanResponse`. Errors: `404` if the plan doesn't exist, `422`
@@ -188,12 +202,13 @@ Deletes a plan and all its courses. Response `204` with no body. Errors: `404`.
 
 #### `POST /plans/{plan_id}/courses`
 
-Adds a course to a plan in a given term.
+Adds a course to a plan in a given year and season.
 
-Request, a `PlanCourseCreate`:
+Request, a `PlanCourseCreate`. `year` must be `1` or more, and `season` must be
+`"fall"`, `"spring"` or `"summer"`:
 
 ```json
-{ "courseId": 12, "termCode": 1257 }
+{ "courseId": 12, "year": 1, "season": "fall" }
 ```
 
 Response `201`, a `PlanCourseRead`:
@@ -201,22 +216,24 @@ Response `201`, a `PlanCourseRead`:
 ```json
 {
   "id": 41,
-  "termCode": 1257,
+  "year": 1,
+  "season": "fall",
   "course": { "id": 12, "courseCode": "CMPT 225", "title": "Data Structures and Programming", "credits": 3 }
 }
 ```
 
-Errors: `404` if the plan, course or term doesn't exist; `422` if a field is
-missing or the wrong type.
+Errors: `404` if the plan or course doesn't exist; `409` if the course is already
+in the plan; `422` if a field is missing, the wrong type, `year` is below `1`, or
+`season` isn't one of the three values.
 
 #### `PATCH /plans/{plan_id}/courses/{plan_course_id}`
 
-Moves a course in a plan to a different term.
+Moves a course in a plan to a different year and season.
 
 Request, a `PlanCourseUpdate`:
 
 ```json
-{ "termCode": 1261 }
+{ "year": 1, "season": "spring" }
 ```
 
 Response `200`, a `PlanCourseRead`. Errors: `404`, `422`.
@@ -266,5 +283,6 @@ Errors return an `ErrorResponse`:
 | Status | Meaning |
 |---|---|
 | `404` | The resource doesn't exist |
+| `409` | The request conflicts with existing data, e.g. adding a course that's already in the plan |
 | `422` | The request body or path failed validation. FastAPI returns `detail` as a list of `{ "loc", "msg", "type" }` objects |
 | `401` | Not signed in. Applies once authentication is added |

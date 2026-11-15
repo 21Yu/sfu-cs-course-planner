@@ -42,3 +42,6 @@ class Plan(Base):
         back_populates="plan",
         cascade="all, delete-orphan"
     )
+
+    start_term_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+

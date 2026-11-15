@@ -50,8 +50,8 @@ The tables are defined as SQLAlchemy models in `backend/app/models/`:
 | `courses` | `Course` | One SFU course |
 | `prerequisites` | `Prerequisite` | A course that another course requires. Rows with the same `group_number` are alternatives |
 | `terms` | `Term` | An SFU term, keyed by its 4-digit code |
-| `plans` | `Plan` | A user's course plan |
-| `plan_courses` | `PlanCourse` | One course placed in one term of a plan |
+| `plans` | `Plan` | A user's course plan, with an optional `start_term_code` |
+| `plan_courses` | `PlanCourse` | One course placed in one `year` and `season` slot of a plan. A course can appear in a plan only once |
 | `program_requirements` | `ProgramRequirement` | One requirement of a program, e.g. "2 calculus courses" |
 | `program_requirement_courses` | `ProgramRequirementCourse` | Links a requirement to the courses that satisfy it |
 

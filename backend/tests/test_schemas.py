@@ -63,8 +63,11 @@ def cmpt225(cmpt125):
 @pytest.fixture
 def plan(cmpt225):
     now = datetime(2026, 1, 15, 18, 30, tzinfo=timezone.utc)
-    plan = Plan(id=7, name="Graduate in 4 years", version=1, created_at=now, updated_at=now)
-    plan.plan_courses = [PlanCourse(id=41, term_code=1257, course=cmpt225)]
+    plan = Plan(
+        id=7, name="Graduate in 4 years", version=1, start_term_code=1257,
+        created_at=now, updated_at=now,
+    )
+    plan.plan_courses = [PlanCourse(id=41, year=1, season="fall", course=cmpt225)]
     return plan
 
 
@@ -111,6 +114,7 @@ def test_plan_response_has_no_courses_or_user(plan):
     data = PlanResponse.model_validate(plan).model_dump(mode="json", by_alias=True)
 
     assert data["createdAt"] == "2026-01-15T18:30:00Z"  # datetimes become ISO strings
+    assert data["startTermCode"] == 1257
     assert "planCourses" not in data
     assert "userId" not in data
 
@@ -121,7 +125,8 @@ def test_plan_detail_includes_courses(plan):
     assert data["planCourses"] == [
         {
             "id": 41,
-            "termCode": 1257,
+            "year": 1,
+            "season": "fall",
             "course": {"id": 12, "courseCode": "CMPT 225", "title": "Data Structures and Programming", "credits": 3},
         }
     ]
@@ -131,7 +136,9 @@ def test_plan_course_read(plan):
     data = PlanCourseRead.model_validate(plan.plan_courses[0]).model_dump(by_alias=True)
 
     assert data["id"] == 41
-    assert data["termCode"] == 1257
+    assert data["year"] == 1
+    assert data["season"] == "fall"
+    assert "termCode" not in data
 
 
 def test_program_requirement_allows_missing_minimums(cmpt225):
@@ -165,22 +172,68 @@ def test_plan_update_requires_name():
         PlanUpdate()
 
 
+def test_plan_create_start_term_is_optional():
+    assert PlanCreate.model_validate({"name": "My plan"}).start_term_code is None
+
+
+def test_plan_create_reads_camel_case_start_term():
+    body = PlanCreate.model_validate({"name": "My plan", "startTermCode": 1257})
+
+    assert body.start_term_code == 1257
+
+
+def test_plan_update_reads_camel_case_start_term():
+    body = PlanUpdate.model_validate({"name": "My plan", "version": 2, "startTermCode": 1267})
+
+    assert body.start_term_code == 1267
+
+
 def test_plan_course_create_from_frontend_json():
     # This is the JSON the frontend sends (camelCase), see api-contracts.md
-    body = PlanCourseCreate.model_validate({"courseId": 12, "termCode": 1257})
+    body = PlanCourseCreate.model_validate({"courseId": 12, "year": 1, "season": "fall"})
 
     assert body.course_id == 12
-    assert body.term_code == 1257
+    assert body.year == 1
+    assert body.season == "fall"
 
 
-def test_plan_course_create_requires_term():
+@pytest.mark.parametrize("missing", ["year", "season"])
+def test_plan_course_create_requires_year_and_season(missing):
+    body = {"courseId": 12, "year": 1, "season": "fall"}
+    del body[missing]
+
     with pytest.raises(ValidationError):
-        PlanCourseCreate.model_validate({"courseId": 12})
+        PlanCourseCreate.model_validate(body)
 
 
-def test_plan_course_update_rejects_wrong_type():
+def test_plan_course_update_accepts_move():
+    body = PlanCourseUpdate.model_validate({"year": 2, "season": "summer"})
+
+    assert (body.year, body.season) == (2, "summer")
+
+
+@pytest.mark.parametrize(
+    "bad_slot",
+    [
+        {"year": 0, "season": "fall"},       # years start at 1
+        {"year": 1, "season": "winter"},     # not an SFU season
+        {"year": 1, "season": "Fall"},       # seasons are lowercase
+        {"year": "one", "season": "fall"},   # wrong type
+    ],
+)
+def test_plan_course_update_rejects_bad_slot(bad_slot):
     with pytest.raises(ValidationError):
-        PlanCourseUpdate.model_validate({"termCode": "fall"})
+        PlanCourseUpdate.model_validate(bad_slot)
+
+
+def test_plan_course_table_constraints():
+    # The database enforces the same rules as the schemas, plus no duplicate courses
+    table = PlanCourse.__table__
+    constraint_names = {c.name for c in table.constraints}
+
+    assert "term_code" not in table.columns
+    assert {"year", "season"} <= set(table.columns.keys())
+    assert {"unique_plan_course", "ck_plan_courses_season", "ck_plan_courses_year"} <= constraint_names
 
 def test_missing_credits_become_zero():
     assert Course(course_code="CMPT 999", title="X", credits=None).credits == 0
