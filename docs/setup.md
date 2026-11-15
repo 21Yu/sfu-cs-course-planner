@@ -38,8 +38,9 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Run all backend commands (the server, tests, migrations and the seed script) from
-`backend/` with this environment active, so Python can find the `app` package.
+Run the server, migrations and the seed script from `backend/` with this
+environment active, so Python can find the `app` package. Tests are the
+exception; see [Run backend tests](#run-backend-tests).
 
 Copy `.env.example` to `.env` in the repository root to override the defaults.
 The app reads `APP_NAME`, `APP_VERSION`, `APP_ENV`, `DEBUG`, `DATABASE_URL`,
@@ -163,10 +164,11 @@ the database and keep its data.
 
 ## Run backend tests
 
-From the `backend` directory:
+From the repository root, with the backend virtual environment active (this is
+how CI runs them):
 
 ```bash
-python -m pytest
+python -m pytest backend/tests -q
 ```
 
 The tests don't need a database.
