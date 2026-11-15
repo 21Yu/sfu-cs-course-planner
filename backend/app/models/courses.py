@@ -1,13 +1,16 @@
 from typing import Optional
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Text, DateTime, func
+from sqlalchemy import UniqueConstraint, String, Integer, Text, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import Base
 
 class Course(Base):
     __tablename__ = "courses"
+    __table_args__ = (
+        UniqueConstraint("dept", "number", name="uq_courses_dept_number"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True
@@ -26,6 +29,11 @@ class Course(Base):
         Integer,
         default=0
     )
+
+    dept: Mapped[str] = mapped_column(String(10))   
+    number: Mapped[str] = mapped_column(String(10))  
+
+    outline_url: Mapped[Optional[str]] = mapped_column(String(500))
 
     @validates("credits")
     def _missing_credits_become_zero(self, key, value):

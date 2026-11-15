@@ -8,6 +8,8 @@ schema name is listed with every endpoint.
 
 ## Conventions
 
+- **All paths start with `/api`**, e.g. `/api/courses`. `/health` is the only
+  exception.
 - **JSON keys are camelCase** (`courseCode`, `planCourses`). The Python code uses
   snake_case (`course_code`). The schemas convert between the two with
   `alias_generator=to_camel`.
@@ -26,34 +28,55 @@ schema name is listed with every endpoint.
 - **`credits` is never `null`.** It is `0` when SFU lists no units for a course.
   The backend stores missing units as `0` (see `Course` in
   `backend/app/models/courses.py`).
-- **Users:** `/plans` endpoints act on the signed-in user's plans. Authentication is
+- **Users:** `/api/plans` endpoints act on the signed-in user's plans. Authentication is
   not designed yet, so no endpoint takes a user ID.
 
 ## Endpoints
 
 | Method | Path | Request body | Success response |
 |---|---|---|---|
-| GET | `/courses` | none | `200` list of `CourseSummary` |
-| GET | `/courses/{course_id}` | none | `200` `CourseResponse` |
-| GET | `/terms` | none | `200` list of `TermRead` |
-| GET | `/plans` | none | `200` list of `PlanResponse` |
-| POST | `/plans` | `PlanCreate` | `201` `PlanDetailResponse` |
-| GET | `/plans/{plan_id}` | none | `200` `PlanDetailResponse` |
-| PATCH | `/plans/{plan_id}` | `PlanUpdate` | `200` `PlanResponse` |
-| DELETE | `/plans/{plan_id}` | none | `204` no body |
-| POST | `/plans/{plan_id}/courses` | `PlanCourseCreate` | `201` `PlanCourseRead` |
-| PATCH | `/plans/{plan_id}/courses/{plan_course_id}` | `PlanCourseUpdate` | `200` `PlanCourseRead` |
-| DELETE | `/plans/{plan_id}/courses/{plan_course_id}` | none | `204` no body |
-| GET | `/programs/{program_code}/requirements` | none | `200` list of `ProgramRequirementResponse` |
+| GET | `/api/courses` | none | `200` list of `CourseSummary` |
+| GET | `/api/courses/{courseCode}` | none | `200` `CourseResponse` |
+| GET | `/api/terms` | none | `200` list of `TermRead` |
+| GET | `/api/plans` | none | `200` list of `PlanResponse` |
+| POST | `/api/plans` | `PlanCreate` | `201` `PlanDetailResponse` |
+| GET | `/api/plans/{plan_id}` | none | `200` `PlanDetailResponse` |
+| PATCH | `/api/plans/{plan_id}` | `PlanUpdate` | `200` `PlanResponse` |
+| DELETE | `/api/plans/{plan_id}` | none | `204` no body |
+| POST | `/api/plans/{plan_id}/courses` | `PlanCourseCreate` | `201` `PlanCourseRead` |
+| PATCH | `/api/plans/{plan_id}/courses/{plan_course_id}` | `PlanCourseUpdate` | `200` `PlanCourseRead` |
+| DELETE | `/api/plans/{plan_id}/courses/{plan_course_id}` | none | `204` no body |
+| GET | `/api/programs/{program_code}/requirements` | none | `200` list of `ProgramRequirementResponse` |
 
 ---
 
 ### Courses
 
-#### `GET /courses`
+#### `GET /api/courses`
 
-Returns every course. The frontend loads the list once and filters it in the
-browser, so there is no search or pagination yet.
+Lists courses, with optional search and paging.
+
+Query parameters, all optional:
+
+| Parameter | Example | Meaning |
+|---|---|---|
+| `q` | `data struct` | Case-insensitive text search on course code and title |
+| `subject` | `CMPT` | Only courses in this department, case-insensitive |
+| `limit` | `20` | Return at most this many courses, 1–500. No limit if left out |
+| `offset` | `40` | Skip this many courses first. Default `0` |
+
+Example: `GET /api/courses?subject=CMPT&q=data&limit=20&offset=0`
+
+With no parameters, every course is returned, so the frontend can keep loading the
+full list once and filtering it in the browser. Results are always sorted by
+department, then course number, so paging with `limit` and `offset` is stable.
+
+Errors: `422` if `limit` is below 1 or above 500, or `offset` is negative.
+
+The response is a plain list, not an envelope like `{ "items": [...], "total": 152 }`.
+With only CMPT courses the frontend can load everything at once, so it doesn't need
+a total count. Switching to an envelope later is a breaking change the frontend has
+to be updated for.
 
 Response `200`, a list of `CourseSummary`:
 
@@ -67,9 +90,16 @@ Response `200`, a list of `CourseSummary`:
 `credits` is `0` when SFU lists no units for the course. The frontend should show
 this as "units not listed", not "0 credits".
 
-#### `GET /courses/{course_id}`
+#### `GET /api/courses/{courseCode}`
 
-Returns one course's full details. Errors: `404` if the course doesn't exist.
+Returns one course's full details.
+
+`courseCode` is written with a hyphen instead of a space, e.g.
+`/api/courses/CMPT-225` or `/api/courses/CMPT-105W`. It is case-insensitive, so
+`cmpt-225` also works. The backend splits it on the first hyphen into the
+department and the course number.
+
+Errors: `404` if no course has that code.
 
 Response `200`, a `CourseResponse` (`CourseSummary` plus these fields):
 
@@ -84,6 +114,7 @@ Response `200`, a `CourseResponse` (`CourseSummary` plus these fields):
   "designation": "Quantitative",
   "prerequisitesText": "(MACM 101 and (CMPT 125, CMPT 129 or CMPT 135)) or (ENSC 251 and ENSC 252), all with a minimum grade of C-.",
   "corequisitesText": null,
+  "outlineUrl": "https://www.sfu.ca/students/calendar/2026/fall/courses/cmpt/225.html",
   "prerequisites": [
     {
       "groupNumber": 1,
@@ -97,11 +128,13 @@ Response `200`, a `CourseResponse` (`CourseSummary` plus these fields):
 user. `prerequisites` is the structured version the app checks. It can't yet
 express every rule, such as "(A and B) or (C and D)" or minimum grades.
 
+`outlineUrl` links to the course's official SFU page. It is `null` if there isn't one.
+
 ---
 
 ### Terms
 
-#### `GET /terms`
+#### `GET /api/terms`
 
 Lists SFU terms. Plans don't use this endpoint. It's kept for checking course
 offerings and for choosing a plan's `startTermCode`.
@@ -119,7 +152,7 @@ Response `200`, a list of `TermRead`:
 
 ### Plans
 
-#### `GET /plans`
+#### `GET /api/plans`
 
 Lists the signed-in user's plans, without their courses.
 
@@ -138,7 +171,7 @@ Response `200`, a list of `PlanResponse`:
 ]
 ```
 
-#### `POST /plans`
+#### `POST /api/plans`
 
 Creates a plan.
 
@@ -152,7 +185,7 @@ is optional and can be `null` or left out if the student hasn't picked a start t
 Response `201`, a `PlanDetailResponse`. A new plan has an empty `planCourses` list.
 Errors: `422` if `name` is missing, empty, or too long.
 
-#### `GET /plans/{plan_id}`
+#### `GET /api/plans/{plan_id}`
 
 Returns one plan with all its courses. Errors: `404` if the plan doesn't exist.
 
@@ -177,7 +210,7 @@ Response `200`, a `PlanDetailResponse` (`PlanResponse` plus `planCourses`):
 }
 ```
 
-#### `PATCH /plans/{plan_id}`
+#### `PATCH /api/plans/{plan_id}`
 
 Renames a plan or changes its start term.
 
@@ -192,7 +225,7 @@ Changing it doesn't move any courses, because they're stored by year and season:
 Response `200`, a `PlanResponse`. Errors: `404` if the plan doesn't exist, `422`
 for an invalid name.
 
-#### `DELETE /plans/{plan_id}`
+#### `DELETE /api/plans/{plan_id}`
 
 Deletes a plan and all its courses. Response `204` with no body. Errors: `404`.
 
@@ -200,7 +233,7 @@ Deletes a plan and all its courses. Response `204` with no body. Errors: `404`.
 
 ### Courses in a plan
 
-#### `POST /plans/{plan_id}/courses`
+#### `POST /api/plans/{plan_id}/courses`
 
 Adds a course to a plan in a given year and season.
 
@@ -226,7 +259,7 @@ Errors: `404` if the plan or course doesn't exist; `409` if the course is alread
 in the plan; `422` if a field is missing, the wrong type, `year` is below `1`, or
 `season` isn't one of the three values.
 
-#### `PATCH /plans/{plan_id}/courses/{plan_course_id}`
+#### `PATCH /api/plans/{plan_id}/courses/{plan_course_id}`
 
 Moves a course in a plan to a different year and season.
 
@@ -238,7 +271,7 @@ Request, a `PlanCourseUpdate`:
 
 Response `200`, a `PlanCourseRead`. Errors: `404`, `422`.
 
-#### `DELETE /plans/{plan_id}/courses/{plan_course_id}`
+#### `DELETE /api/plans/{plan_id}/courses/{plan_course_id}`
 
 Removes a course from a plan. Response `204` with no body. Errors: `404`.
 
@@ -246,7 +279,7 @@ Removes a course from a plan. Response `204` with no body. Errors: `404`.
 
 ### Program requirements
 
-#### `GET /programs/{program_code}/requirements`
+#### `GET /api/programs/{program_code}/requirements`
 
 Lists the requirements for a program, e.g. `CMPT-MAJOR`. Errors: `404` if the
 program doesn't exist.

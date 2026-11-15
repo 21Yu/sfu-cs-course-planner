@@ -28,7 +28,10 @@ How sfucourses outline fields map to the `Course` model:
 
 | sfucourses field | `Course` column | Note |
 |---|---|---|
-| `dept` + `number` | `course_code` | Combined, e.g. `"CMPT 225"` |
+| `dept` | `dept` | e.g. `"CMPT"`. Indexed for subject search |
+| `number` | `number` | e.g. `"225"` or `"105W"`, so stored as a string. `dept` + `number` is unique |
+| `dept` + `number` | `course_code` | Combined, e.g. `"CMPT 225"`. What the frontend displays |
+| (built by the loader) | `outline_url` | Link to the course's official SFU page, or `null` |
 | `title` | `title` | |
 | `units` | `credits` | Sent as a string (`"3"`), stored as an integer |
 | `description` | `description` | |

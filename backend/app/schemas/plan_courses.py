@@ -1,7 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-from app.schemas.courses import CourseSummary
+from app.schemas.course_responses import CourseSummary
 from pydantic.alias_generators import to_camel
 
 Season = Literal["fall", "spring", "summer"]

@@ -21,17 +21,18 @@ class PrerequisiteRead(BaseModel):
                               populate_by_name=True)
 
     group_number: int
-    required_course: CourseSummary              # Prerequisite.required_course is a Course -> nest the small schema
+    required_course: CourseSummary             
 
 
-class CourseResponse(CourseSummary):            # inherits id, course_code, title, credits
-    """Full course details, for GET /courses/{course_id}."""
+class CourseResponse(CourseSummary):            
+    """Full course details, for GET /api/courses/{courseCode}."""
     description: Optional[str] = None
     degree_level: Optional[str] = None
     designation: Optional[str] = None
     corequisites_text: Optional[str] = None
     prerequisites_text: Optional[str] = None
-    prerequisites: list[PrerequisiteRead] = []  # Course.prerequisites is a list -> list of schemas
+    outline_url: Optional[str] = None
+    prerequisites: list[PrerequisiteRead] = [] 
 
 
 class ErrorResponse(BaseModel):

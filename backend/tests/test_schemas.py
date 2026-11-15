@@ -40,7 +40,9 @@ from app.schemas import (
 
 @pytest.fixture
 def cmpt125():
-    return Course(id=3, course_code="CMPT 125", title="Intro CS II", credits=3)
+    return Course(
+        id=3, course_code="CMPT 125", dept="CMPT", number="125", title="Intro CS II", credits=3
+    )
 
 
 @pytest.fixture
@@ -48,6 +50,9 @@ def cmpt225(cmpt125):
     course = Course(
         id=12,
         course_code="CMPT 225",
+        dept="CMPT",
+        number="225",
+        outline_url="https://www.sfu.ca/students/calendar/2026/fall/courses/cmpt/225.html",
         title="Data Structures and Programming",
         credits=3,
         description="Intro to data structures.",
@@ -77,6 +82,7 @@ def plan(cmpt225):
 def test_course_summary_json(cmpt225):
     data = CourseSummary.model_validate(cmpt225).model_dump(mode="json", by_alias=True)
 
+    # Exactly the frontend's Course type: dept, number and outlineUrl stay out
     assert data == {
         "id": 12,
         "courseCode": "CMPT 225",
@@ -102,6 +108,31 @@ def test_course_response_hides_internal_fields(cmpt225):
     data = CourseResponse.model_validate(cmpt225).model_dump(by_alias=True)
 
     assert "lastSyncedAt" not in data
+    # dept and number are for database search; the frontend uses courseCode
+    assert "dept" not in data
+    assert "number" not in data
+
+
+def test_course_response_includes_outline_url(cmpt225):
+    data = CourseResponse.model_validate(cmpt225).model_dump(mode="json", by_alias=True)
+
+    assert data["outlineUrl"] == "https://www.sfu.ca/students/calendar/2026/fall/courses/cmpt/225.html"
+
+
+def test_course_response_outline_url_can_be_missing(cmpt125):
+    data = CourseResponse.model_validate(cmpt125).model_dump(by_alias=True)
+
+    assert data["outlineUrl"] is None
+
+
+def test_course_table_has_dept_and_number():
+    table = Course.__table__
+
+    assert {"dept", "number", "outline_url"} <= set(table.columns.keys())
+    assert not table.c.dept.nullable
+    assert not table.c.number.nullable
+    assert table.c.outline_url.nullable
+    assert "uq_courses_dept_number" in {c.name for c in table.constraints}
 
 
 def test_term_read():
