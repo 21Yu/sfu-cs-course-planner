@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     debug: bool = False
     sfu_courses_api_base_url: str = "https://api.sfucourses.com/v1/rest"
     sfu_courses_api_timeout_seconds: float = 10.0
-
+    database_url: str = "postgresql+psycopg://planner:planner@localhost:5432/course_planner"
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",
         env_file_encoding="utf-8",
