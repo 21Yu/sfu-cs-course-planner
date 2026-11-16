@@ -106,7 +106,39 @@ python -m app.seed
 
 This adds a few terms, a few CMPT courses and a prerequisite, so you have data to
 develop against. It skips rows that already exist, so it is safe to run more than
-once. The full course catalogue is loaded separately (#13).
+once. To load real courses, see [Import course data](#import-course-data).
+
+### Import course data
+
+From the `backend` directory, with the database running and migrated:
+
+```bash
+python -m app.import_courses --dept CMPT
+```
+
+This fetches every course in a department from the sfucourses API and saves it
+to the `courses` and `prerequisites` tables. `--dept` defaults to `CMPT`. When it
+finishes it prints how many courses it created and updated, and how many
+prerequisite rows it saved:
+
+```
+ImportStats(created=135, updated=0, prerequisites=101)
+```
+
+The import is safe to run again. It updates existing courses instead of adding
+duplicates and rebuilds each course's prerequisites, so a second run on unchanged
+data prints `created=0` and leaves the row counts the same. If anything fails,
+the whole import is rolled back.
+
+A prerequisite is only linked if the required course is already in the database.
+To link prerequisites from other departments (for example `MACM 101` for
+`CMPT 225`), import those departments too and then import `CMPT` again:
+
+```bash
+python -m app.import_courses --dept MACM
+python -m app.import_courses --dept MATH
+python -m app.import_courses --dept CMPT
+```
 
 ### Browse the database
 

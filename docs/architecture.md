@@ -48,11 +48,30 @@ prerequisite trees, and returns descriptions as plain text. The provider URL and
 request timeout can be set with `SFU_COURSES_API_BASE_URL` and
 `SFU_COURSES_API_TIMEOUT_SECONDS`.
 
+The loader in `backend/app/services/course_import.py` uses this client to fill the
+database. It is run with `python -m app.import_courses` (see
+[setup.md](setup.md#import-course-data)), and it:
+
+- Normalizes codes and titles: `dept` and `number` are trimmed and uppercased
+  (`" cmpt"`, `"105w "` → `CMPT 105W`), and runs of whitespace in titles become
+  single spaces. `units` that aren't a whole number (empty, missing, or text)
+  become `0` credits.
+- Matches existing courses on `dept` + `number`. A course already in the
+  database is updated in place and gets a new `last_synced_at`. If a course
+  appears twice in one import, the last copy is used.
+- Rebuilds each imported course's `prerequisites` rows from the sfucourses
+  prerequisite tree, deleting the old rows first. The conversion is described
+  under [Data model](#data-model).
+- Runs as one transaction, so a failed import changes nothing.
+
+`designation`, `degree_level` and `outline_url` are not filled yet, because
+`SFUCoursesClient` doesn't return those fields.
+
 For now, `GET /courses` (`backend/app/api/courses.py`) calls this client live and
 returns its shape (`dept`, `number`, `units`, no `id`). That is temporary: #14
 replaces it with a database-backed `GET /api/courses` in the shape described in
-[api-contracts.md](api-contracts.md), and the loader (#13) uses the client to fill
-the database. Don't build frontend code against the current `/courses` response.
+[api-contracts.md](api-contracts.md). Don't build frontend code against the
+current `/courses` response.
 
 ## Data model
 
@@ -71,10 +90,34 @@ The tables are defined as SQLAlchemy models in `backend/app/models/`:
 | `program_requirements`        | `ProgramRequirement`       | One requirement of a program, e.g. "2 calculus courses"                                              |
 | `program_requirement_courses` | `ProgramRequirementCourse` | Links a requirement to the courses that satisfy it                                                   |
 
+A course's prerequisite rows mean "one course from each group". Rows in the same
+`group_number` are alternatives, and every group must be satisfied. Groups are
+numbered from 1. The same (course, required course, group) can't be stored twice.
+
+The loader converts the sfucourses prerequisite tree like this:
+
+| Tree                                  | Rows                                          |
+| ------------------------------------- | --------------------------------------------- |
+| one course: `A`                       | group 1: `A`                                  |
+| `A and B`                             | group 1: `A`; group 2: `B`                    |
+| `A or B`                              | group 1: `A`, `B`                             |
+| `A and (B or C)`                      | group 1: `A`; group 2: `B`, `C`               |
+| anything else, e.g. `(A and B) or C`  | no rows; only `prerequisites_text` is stored  |
+
+It also skips a required course that isn't in the database, and a course listed
+as its own prerequisite.
+
 Known gaps:
 
 - `prerequisites` can't express "(A and B) or (C and D)" or minimum grades, so
-  `courses.prerequisites_text` keeps SFU's original wording.
+  `courses.prerequisites_text` keeps SFU's original wording. For CMPT, 25 of 135
+  courses have prerequisite text but no rows. Most of these are requirements like
+  "45 units" or "permission of the instructor", but some, such as `CMPT 225`, are
+  course requirements in a shape the table can't hold.
+- When part of a tree can't be stored, the loader stores the parts it can. Inside
+  an `and`, an unsupported part is left out, so the stored requirement can be
+  looser than the real one. Inside an `or` group, an alternative that isn't in the
+  database is left out, so the stored requirement can be stricter.
 
 ## API
 
