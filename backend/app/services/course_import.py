@@ -23,6 +23,9 @@ def normalize_title(raw: str) -> str:
 def make_course_code(dept: str, number: str) -> str:
     return normalize_dept(dept)+" "+normalize_number(number)
 
+def empty_to_none(value: str | None) -> str | None:
+    return value or None
+
 def parse_credits(units: str | None) -> int:
     try:
         return int(units)
@@ -67,9 +70,9 @@ def upsert_course(db: Session, data: CourseData) -> tuple[CourseRow, bool]:
     row.course_code = make_course_code(dept, number)
     row.title = normalize_title(data.title)
     row.credits = parse_credits(data.units)
-    row.description = data.description
-    row.prerequisites_text = data.prerequisites
-    row.corequisites_text = data.corequisites
+    row.description = empty_to_none(data.description)
+    row.prerequisites_text = empty_to_none(data.prerequisites)
+    row.corequisites_text = empty_to_none(data.corequisites)
     row.last_synced_at = datetime.now(timezone.utc)
     db.flush()
     return row, is_created
