@@ -1,11 +1,16 @@
-from sqlalchemy import Integer, ForeignKey
+from sqlalchemy import Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from app.models.base import Base
 
 class Prerequisite(Base):
     __tablename__ = "prerequisites"
-
+    __table_args__ = (
+        UniqueConstraint("course_id", 
+                         "required_course_id",
+                         "group_number",
+                         name = "uq_prerequisites_course_required_group"),
+    )
     id: Mapped[int] = mapped_column(
         primary_key=True,
     )
