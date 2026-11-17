@@ -67,7 +67,8 @@ from the repository root, create the tables and load data:
 
 ```bash
 docker compose exec backend alembic upgrade head
-docker compose exec backend python -m app.import_courses --dept CMPT
+docker compose exec backend python -m app.import_courses --dept MACM MATH STAT CMPT
+
 ```
 
 `docker compose exec backend` runs a command inside the running backend
