@@ -1,16 +1,20 @@
 # Local Setup
 
 This guide covers the FastAPI backend, the PostgreSQL database and the React
-frontend. Full Docker setup will be documented as issue #35 is completed.
+frontend. The quickest way to run everything is with Docker; see
+[Run everything with Docker](#run-everything-with-docker). To run the backend
+and frontend directly on your machine instead, follow the sections after it.
 
 ## Prerequisites
 
 - Git
-- Python 3.12 (the version used by CI)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/), to run
-  PostgreSQL locally
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-The frontend uses Vite, which requires Node.js 20.19+ or 22.12+, and npm.
+That's all you need for the Docker setup. To run the backend and frontend
+without Docker, you also need:
+
+- Python 3.12 (the version used by CI)
+- Node.js 20.19+ or 22.12+, and npm (required by Vite)
 
 ## Get the code
 
@@ -23,6 +27,83 @@ The frontend uses Vite, which requires Node.js 20.19+ or 22.12+, and npm.
    git remote add upstream https://github.com/sfuosdev/sfu-cs-course-planner.git
    git remote -v
    ```
+
+## Run everything with Docker
+
+Docker Compose runs the whole app in containers, so you don't need to install
+Python, Node.js or PostgreSQL yourself. Make sure Docker Desktop is running
+before you start.
+
+### Start the app
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+The first run takes a few minutes while Docker downloads images and installs
+dependencies. This starts four containers:
+
+| Service    | URL                          | What it is                  |
+| ---------- | ---------------------------- | --------------------------- |
+| `frontend` | <http://localhost:5173>      | React app (Vite dev server) |
+| `backend`  | <http://localhost:8000/docs> | FastAPI with Swagger docs   |
+| `db`       | `localhost:5432`             | PostgreSQL 16               |
+| `adminer`  | <http://localhost:8080>      | Database browser            |
+
+The backend waits until PostgreSQL is ready before it starts. Check that it can
+reach the database at <http://localhost:8000/health/db>, which should return
+`{"database":"ok"}`.
+
+The `backend` and `frontend` folders are mounted into their containers, so the
+servers reload when you save a file. You don't need to rebuild after code
+changes.
+
+### Set up the database in Docker
+
+The first time you start the app, the database is empty. In a second terminal,
+from the repository root, create the tables and load data:
+
+```bash
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m app.import_courses --dept MACM MATH STAT CMPT
+
+```
+
+`docker compose exec backend` runs a command inside the running backend
+container. Any command in this guide that runs from the `backend` directory
+also works this way, for example `docker compose exec backend python -m app.seed`.
+Run `alembic upgrade head` again whenever you pull changes that add new
+migrations.
+
+### Everyday commands
+
+From the repository root:
+
+| Command                          | What it does                                     |
+| -------------------------------- | ------------------------------------------------ |
+| `docker compose up -d`           | Start all containers in the background           |
+| `docker compose ps`              | List running containers                          |
+| `docker compose logs -f backend` | Follow a container's logs (press Ctrl+C to stop) |
+| `docker compose down`            | Stop and remove the containers; data is kept     |
+| `docker compose up --build`      | Rebuild images, then start                       |
+
+Rebuild with `--build` after a change to `backend/requirements.txt`,
+`frontend/package.json`, or either `Dockerfile`. Dependencies are installed
+when the image is built, so these changes need a rebuild.
+
+### Troubleshooting
+
+- **`port is already allocated`**: another program is already using that
+  port, often a backend or PostgreSQL you started outside Docker. Stop it and
+  try again.
+- **The backend can't connect to the database**: inside a container,
+  `localhost` means the container itself. The backend reaches PostgreSQL at
+  `db:5432`, which `compose.yml` already sets through `DATABASE_URL`.
+- **Start over with an empty database**: `docker compose down -v` deletes all
+  database data. Then run `docker compose up -d` and repeat
+  [Set up the database](#set-up-the-database).
 
 ## Set up and run the backend
 
