@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import { CourseSearch } from "./components/CourseSearch/CourseSearch";
 import type { Course } from "./types/Course";
-import { Route, Routes /* useNavigate */ } from "react-router";
+import { Route, Routes, useNavigate } from "react-router";
 import { GuestRoute } from "./components/auth/GuestRoute";
 import { Login } from "./pages/Login";
 import { SignUp } from "./pages/SignUp";
@@ -37,7 +37,7 @@ function Dashboard() {
     Record<string, Course[]>
   >({});
 
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   const { currentUser, clearCurrentUser } = useAuth();
 
   const plannedUnits = Object.values(plannedCourses)
@@ -85,9 +85,15 @@ function Dashboard() {
           <span className="save-state">
             <span aria-hidden="true" />
             Draft plan
-            <button type="button" onClick={handleLogout}>
-              Log out
-            </button>
+            {currentUser ? (
+              <button type="button" onClick={handleLogout}>
+                Log out
+              </button>
+            ) : (
+              <button type="button" onClick={() => navigate("/login")}>
+                Log in
+              </button>
+            )}
             <section id="temp-user-details">
               {currentUser
                 ? `${currentUser.username} | ${currentUser.email}`
