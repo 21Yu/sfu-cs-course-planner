@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 import { CourseSearch } from "./components/CourseSearch/CourseSearch";
-import type { Course } from "./types/course";
+import type { Course } from "./types/Course";
 import { Route, Routes } from "react-router";
 import { GuestRoute } from "./components/auth/GuestRoute";
 import { Login } from "./pages/Login";
