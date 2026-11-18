@@ -38,7 +38,6 @@ export const SignUp = () => {
         password,
         username: cleanUsername,
       });
-      await refreshCurrentUser();
 
       // TODO: Temporarily navigates to login, replace with actual page later
       navigate("/login");
