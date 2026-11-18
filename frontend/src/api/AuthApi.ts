@@ -1,4 +1,4 @@
-import type { CurrentUser, CurrentUserResponse } from "../types/CurrentUser";
+import type { CurrentUser, CurrentUserResponse } from "#types/CurrentUser";
 
 const SAMPLE_USER: CurrentUser = {
   userId: "f81d4fae-7dec-41d0-a765-00a0c91e6bf6",
@@ -10,7 +10,8 @@ const GET_ME_ENDPOINT = "/api/users/me";
 
 export const requestCurrentUser = async (): Promise<CurrentUser | null> => {
   const user: CurrentUser = SAMPLE_USER;
-  return user;
+  return null; // For logged-out user pages
+  return user; // For logged-in user pages
 
   const response = await fetch(GET_ME_ENDPOINT, {
     credentials: "include",

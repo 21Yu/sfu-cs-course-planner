@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { createContext } from "react";
-import type { CurrentUser } from "../types/CurrentUser";
+import type { CurrentUser } from "#types/CurrentUser";
 
 interface AuthContextType {
   currentUser: CurrentUser | null;

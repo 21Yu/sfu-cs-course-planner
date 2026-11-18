@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { MOCK_COURSES } from "../mock-data/MockCourses";
-import { simulateNetworkDelay } from "../utils/utils";
+import { MOCK_COURSES } from "#mock-data/MockCourses";
+import { simulateNetworkDelay } from "#utils/utils";
 import { CourseContext } from "./CourseContext";
-import type { Course } from "../types/Course";
+import type { Course } from "#types/Course";
 
 export const CourseContextProvider = ({
   children,

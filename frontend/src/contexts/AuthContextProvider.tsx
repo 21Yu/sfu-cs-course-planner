@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import type { CurrentUser } from "../types/CurrentUser";
-import { requestCurrentUser } from "../api/AuthApi";
+import type { CurrentUser } from "#types/CurrentUser";
+import { requestCurrentUser } from "#api/AuthApi";
 import { AuthContext } from "./AuthContext";
 
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {

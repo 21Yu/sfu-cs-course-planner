@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import type { Course } from "../types/Course";
+import type { Course } from "#types/Course";
 import { createContext } from "react";
 
 interface CourseContext {
