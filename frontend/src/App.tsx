@@ -2,13 +2,13 @@ import { useState } from "react";
 import "./App.css";
 import { CourseSearch } from "./components/CourseSearch/CourseSearch";
 import type { Course } from "./types/Course";
-import { Route, Routes, useNavigate } from "react-router";
+import { Route, Routes /* useNavigate */ } from "react-router";
 import { GuestRoute } from "./components/auth/GuestRoute";
 import { Login } from "./pages/Login";
 import { SignUp } from "./pages/SignUp";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Placeholder } from "./pages/Placeholder";
-import { logoutUser } from "#api/AuthApi";
+// import { logoutUser } from "#api/AuthApi";
 import { useAuth } from "#contexts/AuthContext";
 
 const concentrations = [
@@ -37,7 +37,7 @@ function Dashboard() {
     Record<string, Course[]>
   >({});
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { currentUser, clearCurrentUser } = useAuth();
 
   const plannedUnits = Object.values(plannedCourses)
