@@ -55,12 +55,13 @@ function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      clearCurrentUser();
       // TODO: Properly connect to API
       // await logoutUser();
-      // navigate("/login");
     } catch (error) {
       console.error("Error logging out", error);
+    } finally {
+      clearCurrentUser();
+      // navigate("/login");
     }
   };
 

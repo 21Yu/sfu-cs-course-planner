@@ -20,6 +20,7 @@ export const Login = () => {
 
     if (cleanEmail === "" || password === "") {
       setError("Please enter email and password.");
+      return;
     }
 
     setIsSubmitting(true);

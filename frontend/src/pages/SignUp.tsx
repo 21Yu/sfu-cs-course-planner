@@ -1,5 +1,4 @@
 import { signUpUser } from "#api/AuthApi";
-import { useAuth } from "#contexts/AuthContext";
 import { cleanString } from "#utils/strings";
 import { useState, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router";
@@ -13,7 +12,6 @@ export const SignUp = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { refreshCurrentUser } = useAuth();
 
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
@@ -42,7 +40,7 @@ export const SignUp = () => {
       // TODO: Temporarily navigates to login, replace with actual page later
       navigate("/login");
     } catch (error) {
-      setError("Error logging in");
+      setError("Error signing up");
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -69,7 +67,7 @@ export const SignUp = () => {
         <label htmlFor="username-input">Username</label>
         <input
           id="username-input"
-          type="username"
+          type="text"
           placeholder="Enter your username..."
           value={username}
           onChange={(e) => {
@@ -89,12 +87,11 @@ export const SignUp = () => {
             setPassword(e.target.value);
           }}
           required
-          autoComplete="new-password"
         />
 
         <label htmlFor="password-input">Confirm password</label>
         <input
-          id="password-input"
+          id="confirm-password-input"
           type={showPassword ? "text" : "password"}
           placeholder="Confirm your password..."
           value={confirmPassword}
@@ -102,7 +99,6 @@ export const SignUp = () => {
             setConfirmPassword(e.target.value);
           }}
           required
-          autoComplete="confirm-password"
         />
         <button
           type="button"
