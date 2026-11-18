@@ -11,7 +11,8 @@ const SAMPLE_USER: CurrentUser = {
   username: "Test user",
   email: "user@test.com",
 };
-const MOCK_SAMPLE_USER = true;
+// Change to true to use the sample user data, change to false to use null for guest view
+const MOCK_SAMPLE_USER = false;
 
 // Assumed endpoints
 const GET_ME_ENDPOINT = "/api/users/me";
