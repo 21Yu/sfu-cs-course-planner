@@ -24,7 +24,7 @@ export const Login = () => {
 
     setIsSubmitting(true);
     try {
-      await loginUser({ email, password });
+      await loginUser({ email: cleanEmail, password });
       await refreshCurrentUser();
 
       // TODO: Temporarily navigates to placeholder, replace with actual page later
@@ -38,44 +38,47 @@ export const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="email-input">Email</label>
-      <input
-        id="email-input"
-        type="email"
-        placeholder="user@example.com..."
-        value={email}
-        onChange={(e) => {
-          setEmail(e.target.value);
-        }}
-        required
-        autoComplete="email"
-      />
+    <>
+      {error !== "" && <div>{error}</div>}
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="email-input">Email</label>
+        <input
+          id="email-input"
+          type="email"
+          placeholder="user@example.com..."
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+          }}
+          required
+          autoComplete="email"
+        />
 
-      <label htmlFor="password-input">Password</label>
-      <input
-        id="password-input"
-        type={showPassword ? "text" : "password"}
-        placeholder="Enter your password..."
-        value={password}
-        onChange={(e) => {
-          setPassword(e.target.value);
-        }}
-        required
-        autoComplete="password"
-      />
-      <button
-        type="button"
-        onClick={() => {
-          setShowPassword(!showPassword);
-        }}
-      >
-        {showPassword ? "Hide" : "Show"}
-      </button>
+        <label htmlFor="password-input">Password</label>
+        <input
+          id="password-input"
+          type={showPassword ? "text" : "password"}
+          placeholder="Enter your password..."
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+          }}
+          required
+          autoComplete="current-password"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setShowPassword(!showPassword);
+          }}
+        >
+          {showPassword ? "Hide" : "Show"}
+        </button>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Logging in..." : "Log in"}
-      </button>
-    </form>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Logging in..." : "Log in"}
+        </button>
+      </form>
+    </>
   );
 };
