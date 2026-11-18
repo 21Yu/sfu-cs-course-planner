@@ -8,3 +8,7 @@ export interface SignUpRequest {
   password: string;
   username: string;
 }
+
+export interface AuthErrorResponse {
+  error: string;
+}

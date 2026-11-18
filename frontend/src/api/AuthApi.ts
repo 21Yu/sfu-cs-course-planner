@@ -1,4 +1,8 @@
-import type { LoginRequest, SignUpRequest } from "#types/Auth";
+import type {
+  AuthErrorResponse,
+  LoginRequest,
+  SignUpRequest,
+} from "#types/Auth";
 import type { CurrentUser, CurrentUserResponse } from "#types/CurrentUser";
 
 // Hardcoded sample user
@@ -7,18 +11,29 @@ const SAMPLE_USER: CurrentUser = {
   username: "Test user",
   email: "user@test.com",
 };
+const MOCK_SAMPLE_USER = true;
 
 // Assumed endpoints
 const GET_ME_ENDPOINT = "/api/users/me";
-const LOGIN_ENDPOINT = "/api/users/login";
-const LOGOUT_ENDPOINT = "/api/users/logout";
+const LOGIN_ENDPOINT = "/api/auth/login";
+const LOGOUT_ENDPOINT = "/api/auth/logout";
 const SIGNUP_ENDPOINT = "/api/users/signup";
+
+const getErrorMessage = async (
+  response: Response,
+  fallbackErrorMessage: string,
+): Promise<string> => {
+  const responseBody: AuthErrorResponse = await response
+    .json()
+    .catch(() => null);
+  return responseBody?.error ?? fallbackErrorMessage;
+};
 
 const sendAuthenticationRequest = async (
   endpoint: string,
   requestBody: SignUpRequest | LoginRequest,
   fallbackErrorMessage: string,
-) => {
+): Promise<CurrentUser> => {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -28,15 +43,14 @@ const sendAuthenticationRequest = async (
     body: JSON.stringify(requestBody),
   });
   if (!response.ok) {
-    throw new Error(fallbackErrorMessage);
+    throw new Error(await getErrorMessage(response, fallbackErrorMessage));
   }
-  const data = await response.json();
+  const data: CurrentUserResponse = await response.json();
   return data.user;
 };
 
 export const requestCurrentUser = async (): Promise<CurrentUser | null> => {
-  const user: CurrentUser = SAMPLE_USER;
-  return null; // For logged-out user pages
+  const user: CurrentUser | null = MOCK_SAMPLE_USER ? SAMPLE_USER : null;
   return user; // For logged-in user pages
 
   // TODO: Test and modify function for actual endpoint once it is implemented
@@ -55,7 +69,7 @@ export const requestCurrentUser = async (): Promise<CurrentUser | null> => {
 
 export const loginUser = async (
   loginRequest: LoginRequest,
-): Promise<CurrentUser | null> => {
+): Promise<CurrentUser> => {
   return sendAuthenticationRequest(
     LOGIN_ENDPOINT,
     loginRequest,
@@ -75,7 +89,7 @@ export const logoutUser = async (): Promise<void> => {
 
 export const signUpUser = async (
   signUpRequest: SignUpRequest,
-): Promise<CurrentUser | null> => {
+): Promise<CurrentUser> => {
   return sendAuthenticationRequest(
     SIGNUP_ENDPOINT,
     signUpRequest,

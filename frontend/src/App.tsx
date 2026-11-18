@@ -2,12 +2,14 @@ import { useState } from "react";
 import "./App.css";
 import { CourseSearch } from "./components/CourseSearch/CourseSearch";
 import type { Course } from "./types/Course";
-import { Route, Routes } from "react-router";
+import { Route, Routes, useNavigate } from "react-router";
 import { GuestRoute } from "./components/auth/GuestRoute";
 import { Login } from "./pages/Login";
 import { SignUp } from "./pages/SignUp";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Placeholder } from "./pages/Placeholder";
+import { logoutUser } from "#api/AuthApi";
+import { useAuth } from "#contexts/AuthContext";
 
 const concentrations = [
   "Artificial Intelligence",
@@ -35,6 +37,9 @@ function Dashboard() {
     Record<string, Course[]>
   >({});
 
+  const navigate = useNavigate();
+  const { currentUser, clearCurrentUser } = useAuth();
+
   const plannedUnits = Object.values(plannedCourses)
     .flat()
     .reduce((total, course) => total + course.credits, 0);
@@ -46,6 +51,17 @@ function Dashboard() {
         return current;
       return { ...current, [selectedTerm]: [...currentTermCourses, course] };
     });
+  };
+
+  const handleLogout = async () => {
+    try {
+      clearCurrentUser();
+      // TODO: Properly connect to API
+      // await logoutUser();
+      // navigate("/login");
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
   };
 
   return (
@@ -68,6 +84,14 @@ function Dashboard() {
           <span className="save-state">
             <span aria-hidden="true" />
             Draft plan
+            <button type="button" onClick={handleLogout}>
+              Log out
+            </button>
+            <section id="temp-user-details">
+              {currentUser
+                ? `${currentUser.username} | ${currentUser.email}`
+                : "Guest"}
+            </section>
           </span>
         </div>
       </header>
