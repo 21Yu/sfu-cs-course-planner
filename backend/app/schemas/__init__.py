@@ -1,4 +1,5 @@
 """API response schemas."""
+from app.schemas.auth import LoginRequest, RegisterRequest, UserResponse
 from app.schemas.course_responses import CourseResponse, CourseSummary, ErrorResponse, PrerequisiteRead
 from app.schemas.plan import PlanCreate, PlanDetailResponse, PlanResponse, PlanUpdate
 from app.schemas.plan_courses import PlanCourseCreate, PlanCourseRead, PlanCourseUpdate

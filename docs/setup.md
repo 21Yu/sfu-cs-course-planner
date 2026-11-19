@@ -125,8 +125,11 @@ exception; see [Run backend tests](#run-backend-tests).
 
 Copy `.env.example` to `.env` in the repository root to override the defaults.
 The app reads `APP_NAME`, `APP_VERSION`, `APP_ENV`, `DEBUG`, `DATABASE_URL`,
-`SFU_COURSES_API_BASE_URL`, and `SFU_COURSES_API_TIMEOUT_SECONDS` from that file
-or from the process environment. The `/courses` endpoint accepts optional `dept`
+`SFU_COURSES_API_BASE_URL`, `SFU_COURSES_API_TIMEOUT_SECONDS`, `SESSION_TTL_DAYS`,
+`SESSION_COOKIE_NAME` and `SESSION_COOKIE_SECURE` from that file
+or from the process environment. The session settings control sign-in cookies; the
+defaults work for local development. When `APP_ENV` isn't `development`, the cookie
+is marked `Secure` and browsers only send it over HTTPS. The `/courses` endpoint accepts optional `dept`
 and `number` query parameters and returns course outline data from sfucourses.
 Upstream errors return 502 and upstream timeouts return 504.
 
@@ -284,7 +287,21 @@ how CI runs them):
 python -m pytest backend/tests -q
 ```
 
-The tests don't need a database.
+The tests don't need a database; they use an in-memory SQLite database.
+
+### Try sign-in locally
+
+After `alembic upgrade head` (the `user_sessions` table was added for sign-in), open
+<http://localhost:8000/docs> and use the `auth` endpoints: register, then call
+`GET /api/auth/me`. Swagger UI keeps the session cookie, so the `plans` endpoints
+work afterwards. Or with curl:
+
+```bash
+curl -c cookies.txt -H "Content-Type: application/json" \
+  -d '{"email":"me@sfu.ca","password":"correct horse battery"}' \
+  http://localhost:8000/api/auth/register
+curl -b cookies.txt http://localhost:8000/api/plans
+```
 
 ## Run the frontend
 

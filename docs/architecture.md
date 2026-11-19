@@ -85,6 +85,7 @@ The tables are defined as SQLAlchemy models in `backend/app/models/`:
 | `prerequisites`               | `Prerequisite`             | A course that another course requires. Rows with the same `group_number` are alternatives            |
 | `terms`                       | `Term`                     | An SFU term, keyed by its 4-digit code                                                               |
 | `users`                       | `User`                     | An account: email and a hashed password                                                              |
+| `user_sessions`               | `UserSession`              | A signed-in browser session: a hash of its token and when it expires                                 |
 | `plans`                       | `Plan`                     | A user's course plan, with an optional `start_term_code`                                             |
 | `plan_courses`                | `PlanCourse`               | One course placed in one `year` and `season` slot of a plan. A course can appear in a plan only once |
 | `program_requirements`        | `ProgramRequirement`       | One requirement of a program, e.g. "2 calculus courses"                                              |
@@ -118,6 +119,56 @@ Known gaps:
   an `and`, an unsupported part is left out, so the stored requirement can be
   looser than the real one. Inside an `or` group, an alternative that isn't in the
   database is left out, so the stored requirement can be stricter.
+
+## Authentication
+
+Accounts use an email and a password. A signed-in browser holds a random session
+token in a cookie, and the backend looks the token up in the `user_sessions` table
+on each request. The endpoints are in [api-contracts.md](api-contracts.md#auth).
+
+### Options considered
+
+| Option                                    | Verdict                                                                                                                                        |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server-side sessions in an HttpOnly cookie | **Chosen.** Logging out deletes the session, so a copied token stops working. JavaScript can't read the cookie, which limits what an XSS bug can steal. Needs one table and no new auth library |
+| JWT sent in an `Authorization` header      | Stateless, but a JWT can't be revoked before it expires, so logout only forgets the token in the browser. The frontend also has to store it where scripts can read it |
+| JWT in an HttpOnly cookie                  | Safer storage than the header, but still can't be revoked, and adds a JWT library and key management                                           |
+| SFU login (CAS) or Google/GitHub OAuth     | No passwords to store, but SFU CAS needs the university to register the app, and OAuth adds a provider to set up and depend on. Could be added later |
+
+### How it works
+
+- **Passwords** are hashed with Argon2 (`backend/app/services/passwords.py`) and are
+  never stored or returned. Passwords must be 8 to 128 characters.
+- **Emails** are stored trimmed and lowercase, so `Student@SFU.ca` and
+  `student@sfu.ca` are the same account.
+- **Sessions:** login creates a 32-byte random token and sets it in the `session`
+  cookie. Only its SHA-256 hash is stored, so a leaked database doesn't leak working
+  sessions. A session lasts `SESSION_TTL_DAYS` (default 7), then is rejected and
+  deleted. Every login gets a new token, and logout deletes the session on the server.
+- **Cookie flags:** `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` unless
+  `APP_ENV` is `development` (override with `SESSION_COOKIE_SECURE`).
+- **Failed logins** return the same `401` for a wrong password and an unknown email,
+  and the backend does the same amount of hashing work for both.
+- **Plan access:** every plan belongs to one user through `plans.user_id`. Routes
+  under `/api/plans` take the user from the session and never from the request, and
+  look plans up with `get_owned_plan` in `backend/app/api/deps.py`. A plan that
+  belongs to someone else gets the same `404` as one that doesn't exist. New routes
+  that take a `plan_id` should depend on `get_owned_plan` too.
+
+### Known gaps
+
+- No rate limiting or lockout on login or sign-up. Argon2 makes each guess slow, but
+  repeated guesses aren't blocked.
+- No CSRF token. `SameSite=Lax` stops other sites from sending the cookie with
+  `POST`, `PATCH` and `DELETE` requests, and no state-changing route uses `GET`.
+  Revisit this if the frontend is ever served from a different site than the API.
+- No email verification or password reset.
+- The frontend doesn't have login pages yet. Serving the frontend and API from one
+  origin (for example a Vite dev proxy for `/api`) or adding CORS with credentials is
+  needed before it can use the cookie.
+- Sign-up returns `409` for an email that's taken, which reveals that the account
+  exists.
+- `er-diagram.png` doesn't show `user_sessions` yet.
 
 ## API
 
