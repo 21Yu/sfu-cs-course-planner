@@ -4,7 +4,9 @@ The REST API between the React frontend and the FastAPI backend. Each request an
 response shape below is defined as a Pydantic schema in `backend/app/schemas/`. The
 schema name is listed with every endpoint.
 
-> Status: designed in #9. The endpoints are not implemented yet.
+> Status: designed in #9. The auth endpoints and the plan endpoints
+> (`/api/plans` and `/api/plans/{plan_id}`) are implemented (#38). The rest are not
+> implemented yet.
 
 ## Conventions
 
@@ -28,13 +30,18 @@ schema name is listed with every endpoint.
 - **`credits` is never `null`.** It is `0` when SFU lists no units for a course.
   The backend stores missing units as `0` (see `Course` in
   `backend/app/models/courses.py`).
-- **Users:** `/api/plans` endpoints act on the signed-in user's plans. Authentication is
-  not designed yet, so no endpoint takes a user ID.
+- **Users:** `/api/plans` endpoints act on the signed-in user's plans, identified by
+  the `session` cookie (see [Auth](#auth)). No endpoint takes a user ID. Browsers
+  send the cookie automatically; other clients must send it back too.
 
 ## Endpoints
 
 | Method | Path | Request body | Success response |
 |---|---|---|---|
+| POST | `/api/auth/register` | `RegisterRequest` | `201` `UserResponse`, signs in |
+| POST | `/api/auth/login` | `LoginRequest` | `200` `UserResponse`, signs in |
+| POST | `/api/auth/logout` | none | `204` no body |
+| GET | `/api/auth/me` | none | `200` `UserResponse` |
 | GET | `/api/courses` | none | `200` list of `CourseSummary` |
 | GET | `/api/courses/{courseCode}` | none | `200` `CourseResponse` |
 | GET | `/api/terms` | none | `200` list of `TermRead` |
@@ -47,6 +54,59 @@ schema name is listed with every endpoint.
 | PATCH | `/api/plans/{plan_id}/courses/{plan_course_id}` | `PlanCourseUpdate` | `200` `PlanCourseRead` |
 | DELETE | `/api/plans/{plan_id}/courses/{plan_course_id}` | none | `204` no body |
 | GET | `/api/programs/{program_code}/requirements` | none | `200` list of `ProgramRequirementResponse` |
+
+---
+
+### Auth
+
+Signing in sets a `session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` outside
+development) that lasts 7 days by default. Send it back on later requests. JavaScript
+can't read it, so `fetch` calls from another origin need `credentials: "include"`.
+Routes that need a signed-in user return `401` without a valid cookie.
+
+#### `POST /api/auth/register`
+
+Creates an account and signs in.
+
+Request, a `RegisterRequest`. `email` must be a valid email address, and `password`
+must be 8–128 characters. Emails aren't case-sensitive:
+
+```json
+{ "email": "student@sfu.ca", "password": "correct horse battery" }
+```
+
+Response `201`, a `UserResponse`, with the `session` cookie set. The password is
+never returned:
+
+```json
+{ "id": 1, "email": "student@sfu.ca", "createdAt": "2026-01-15T18:30:00Z" }
+```
+
+Errors: `409` if the email already has an account; `422` for an invalid email or a
+password that is too short or too long.
+
+#### `POST /api/auth/login`
+
+Signs in with an existing account. Request, a `LoginRequest`, with the same fields as
+`RegisterRequest`:
+
+```json
+{ "email": "student@sfu.ca", "password": "correct horse battery" }
+```
+
+Response `200`, a `UserResponse`, with a new `session` cookie. Errors: `401` with
+`"Invalid email or password"`, the same for a wrong password and an unknown email;
+`422` for a malformed body.
+
+#### `POST /api/auth/logout`
+
+Ends the current session on the server and clears the cookie. Response `204` with no
+body. It also returns `204` when nobody is signed in.
+
+#### `GET /api/auth/me`
+
+Returns the signed-in user, so the frontend can check whether someone is signed in.
+Response `200`, a `UserResponse`. Errors: `401` if not signed in.
 
 ---
 
@@ -154,7 +214,7 @@ Response `200`, a list of `TermRead`:
 
 #### `GET /api/plans`
 
-Lists the signed-in user's plans, without their courses.
+Lists the signed-in user's plans, without their courses. Errors: `401`.
 
 Response `200`, a list of `PlanResponse`:
 
@@ -183,11 +243,12 @@ is optional and can be `null` or left out if the student hasn't picked a start t
 ```
 
 Response `201`, a `PlanDetailResponse`. A new plan has an empty `planCourses` list.
-Errors: `422` if `name` is missing, empty, or too long.
+Errors: `401`; `422` if `name` is missing, empty, or too long.
 
 #### `GET /api/plans/{plan_id}`
 
-Returns one plan with all its courses. Errors: `404` if the plan doesn't exist.
+Returns one plan with all its courses. Errors: `401`; `404` if the plan doesn't
+exist or belongs to another user.
 
 Response `200`, a `PlanDetailResponse` (`PlanResponse` plus `planCourses`):
 
@@ -222,12 +283,15 @@ Changing it doesn't move any courses, because they're stored by year and season:
 { "name": "Graduate in 5 years", "version": 3, "startTermCode": 1267 }
 ```
 
-Response `200`, a `PlanResponse`. Errors: `404` if the plan doesn't exist, `422`
-for an invalid name.
+Response `200`, a `PlanResponse` with `version` increased by 1. Errors: `401`; `404`
+if the plan doesn't exist or belongs to another user; `409` if `version` isn't the
+plan's current version, because it was changed since the client loaded it; `422` for
+an invalid name.
 
 #### `DELETE /api/plans/{plan_id}`
 
-Deletes a plan and all its courses. Response `204` with no body. Errors: `404`.
+Deletes a plan and all its courses. Response `204` with no body. Errors: `401`;
+`404` if the plan doesn't exist or belongs to another user.
 
 ---
 
@@ -315,7 +379,7 @@ Errors return an `ErrorResponse`:
 
 | Status | Meaning |
 |---|---|
-| `404` | The resource doesn't exist |
-| `409` | The request conflicts with existing data, e.g. adding a course that's already in the plan |
+| `404` | The resource doesn't exist, or belongs to another user. The API doesn't say which |
+| `409` | The request conflicts with existing data, e.g. adding a course that's already in the plan, registering a taken email, or updating a plan with an out-of-date `version` |
 | `422` | The request body or path failed validation. FastAPI returns `detail` as a list of `{ "loc", "msg", "type" }` objects |
-| `401` | Not signed in. Applies once authentication is added |
+| `401` | Not signed in, or the session expired. Also returned for a wrong email or password at login |
