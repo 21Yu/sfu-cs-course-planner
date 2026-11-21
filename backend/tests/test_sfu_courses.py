@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from backend.app.services.sfu_courses import (
+from app.services.sfu_courses import (
     SFUCoursesAPIError,
     SFUCoursesClient,
     SFUCoursesTimeoutError,
