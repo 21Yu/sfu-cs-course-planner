@@ -176,13 +176,27 @@ function Dashboard() {
                     const courses = plannedCourses[key] ?? []
                     const units = courses.reduce((sum, course) => sum + course.credits, 0)
                     return (
-                      <div className={`term-card${selectedTerm === key ? ' selected' : ''}`} key={term} role="button" tabIndex={0} aria-pressed={selectedTerm === key} onClick={() => setSelectedTerm(key)} onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          setSelectedTerm(key)
-                        }
-                      }}>
-                        <div className="term-card-heading"><h3>{term}</h3><span>{term === 'Fall' ? 'Sep – Dec' : term === 'Spring' ? 'Jan – Apr' : 'May – Aug'}</span></div>
+                        <section
+                          className={`term-card${selectedTerm === key ? ' selected' : ''}`}
+                          key={term}
+                        >
+                        <div className="term-card-heading">
+                          <button
+                            type="button"
+                            className="term-select-button"
+                            aria-pressed={selectedTerm === key}
+                            onClick={() => setSelectedTerm(key)}
+                          >
+                            <span>{term}</span>
+                            <span>
+                              {term === 'Fall'
+                                ? 'Sep – Dec'
+                                : term === 'Spring'
+                                  ? 'Jan – Apr'
+                                  : 'May – Aug'}
+                            </span>
+                          </button>
+                        </div>
                         <div className="term-dropzone">
                           {courses.length === 0 ? <><span className="plus-mark" aria-hidden="true">+</span><span>{selectedTerm === key ? 'Selected for courses' : 'Choose term'}</span></> : 
                             courses.map((course) => (
@@ -225,7 +239,7 @@ function Dashboard() {
                           }
                         </div>
                         <div className="term-units">{units} units</div>
-                      </div>
+                      </section>
                     )
                   })}
                 </div>
