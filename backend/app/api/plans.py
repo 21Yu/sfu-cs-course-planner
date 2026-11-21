@@ -100,6 +100,33 @@ def get_plan(plan: Plan = Depends(get_owned_plan)) -> Plan:
 
 
 @router.patch(
+    "/{plan_id}/courses/{plan_course_id}",
+    response_model=PlanCourseRead,
+    responses={404: {"model": ErrorResponse}},
+)
+def update_plan_course(
+    plan_course_id: int,
+    payload: PlanCourseUpdate,
+    plan: Plan = Depends(get_owned_plan),
+    db: Session = Depends(get_db),
+) -> PlanCourse:
+    plan_course = db.scalar(
+        select(PlanCourse).where(
+            PlanCourse.id == plan_course_id,
+            PlanCourse.plan_id == plan.id,
+        )
+    )
+    if plan_course is None:
+        raise HTTPException(status_code=404, detail="Plan course not found")
+
+    plan_course.year = payload.year
+    plan_course.season = payload.season
+    db.commit()
+    db.refresh(plan_course)
+    return plan_course
+
+
+@router.patch(
     "/{plan_id}",
     response_model=PlanResponse,
     responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
@@ -132,57 +159,28 @@ def update_plan(
     return plan
 
 
-@router.patch(
-    "/{plan_id}/courses/{course_id}",
-    response_model=PlanCourseRead,
-    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
-    summary="Update a course in my plan",
+@router.delete(
+    "/{plan_id}",
+    status_code=204,
+    responses={404: {"model": ErrorResponse}},
+    summary="Delete a plan",
 )
-def update_course(
-    plan: Plan = Depends(get_owned_plan),
-    course_id: int,
-    payload: PlanCourseUpdate,
-    db: Session = Depends(get_db),
-) -> PlanCourse:
-    plan_course = db.get(PlanCourse, (plan.id, course_id))
-    if plan_course is None:
-        raise HTTPException(status_code=404, detail="Course not found in plan")
-
-    values: dict = {}
-    if "year" in payload.model_fields_set:
-        values["year"] = payload.year
-    if "season" in payload.model_fields_set:
-        values["season"] = payload.season
-
-    # Only update the version the client expects, to avoid lost updates.
-    result = db.execute(
-        update(PlanCourse)
-        .where(PlanCourse.plan_id == plan.id, PlanCourse.course_id == course_id, PlanCourse.version == payload.version)
-        .values(**values, version=PlanCourse.version + 1)
-        .execution_options(synchronize_session=False)
-    )
-    if result.rowcount == 0:
-        db.rollback()
-        raise HTTPException(
-            status_code=409, detail="Course was changed elsewhere. Reload it and try again"
-        )
-
+def delete_plan(plan: Plan = Depends(get_owned_plan), db: Session = Depends(get_db)) -> Response:
+    db.delete(plan)
     db.commit()
-    db.refresh(plan_course)
-    return plan_course
+    return Response(status_code=204)
 
 
-@router.patch(
+@router.delete(
     "/{plan_id}/courses/{plan_course_id}",
-    response_model=PlanCourseRead,
+    status_code=204,
     responses={404: {"model": ErrorResponse}},
 )
-def update_plan_course(
+def delete_plan_course(
     plan_course_id: int,
-    payload: PlanCourseUpdate,
     plan: Plan = Depends(get_owned_plan),
     db: Session = Depends(get_db),
-) -> PlanCourse:
+) -> Response:
     plan_course = db.scalar(
         select(PlanCourse).where(
             PlanCourse.id == plan_course_id,
@@ -192,21 +190,7 @@ def update_plan_course(
     if plan_course is None:
         raise HTTPException(status_code=404, detail="Plan course not found")
 
-    plan_course.year = payload.year
-    plan_course.season = payload.season
-    db.commit()
-    db.refresh(plan_course)
-    return plan_course
-
-
-@router.delete(
-    "/{plan_id}",
-    status_code=204,
-    responses={404: {"model": ErrorResponse}},
-    summary="Delete a plan",
-)
-def delete_plan(plan: Plan = Depends(get_owned_plan), db: Session = Depends(get_db)) -> Response:
-    db.delete(plan)
+    db.delete(plan_course)
     db.commit()
     return Response(status_code=204)
 
