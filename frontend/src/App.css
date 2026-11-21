@@ -125,3 +125,13 @@
 .remove-course-button:focus-visible {
   color: #a33b3b;
 }
+
+.move-course-select {
+  max-width: 100%;
+  border: 0;
+  border-radius: 3px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}

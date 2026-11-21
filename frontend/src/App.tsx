@@ -62,6 +62,51 @@ function Dashboard() {
     })
   }
 
+  const handleMoveCourse = (
+    fromTerm: string,
+    toTerm: string,
+    courseId: string,
+  ) => {
+    if (fromTerm === toTerm) return
+
+    setPlannedCourses((current) => {
+      const courseToMove = (current[fromTerm] ?? []).find(
+        (course) => course.id === courseId,
+      )
+
+      if (!courseToMove) return current
+
+      const destinationCourses = current[toTerm] ?? []
+
+      if (
+        destinationCourses.some(
+          (course) => course.id === courseToMove.id,
+        )
+      ) {
+        return current
+      }
+
+      return {
+        ...current,
+        [fromTerm]: (current[fromTerm] ?? []).filter(
+          (course) => course.id !== courseId,
+        ),
+        [toTerm]: [...destinationCourses, courseToMove],
+      }
+    })
+  }
+
+  const semesterOptions = years.flatMap((year) =>
+    terms.map((term) => {
+      const key = termKey(year, term)
+
+      return {
+        key,
+        label: formatTermLabel(key),
+      }
+    }),
+  )
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -143,6 +188,27 @@ function Dashboard() {
                             courses.map((course) => (
                               <div className="planned-course" key={course.id}>
                                 <span>{course.courseCode}</span>
+                                <select
+                                  className="move-course-select"
+                                  defaultValue=""
+                                  aria-label={`Move ${course.courseCode} from ${term}`}
+                                  onClick={(event) => event.stopPropagation()}
+                                  onChange={(event) => {
+                                    handleMoveCourse(key, event.target.value, course.id)
+                                  }}
+                                >
+                                  <option value="" disabled>
+                                    Move to…
+                                  </option>
+
+                                  {semesterOptions
+                                    .filter((semester) => semester.key !== key)
+                                    .map((semester) => (
+                                      <option key={semester.key} value={semester.key}>
+                                        {semester.label}
+                                      </option>
+                                    ))}
+                                </select>
                                 <button
                                   type="button"
                                   className="remove-course-button"
