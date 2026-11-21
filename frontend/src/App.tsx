@@ -25,21 +25,23 @@ function Dashboard() {
   const [years, setYears] = useState([1, 2, 3, 4])
   const [selectedTerm, setSelectedTerm] = useState(termKey(1, 'Fall'))
   const [plannedCourses, setPlannedCourses] = useState<SemesterCourses>({})
+  const [plannerMessage, setPlannerMessage] = useState<string | null>(null)
 
   const plannedUnits = Object.values(plannedCourses)
     .flat()
     .reduce((total, course) => total + course.credits, 0)
 
   const handleSelectCourse = (course: Course) => {
+    const courseIsAlreadyPlanned = Object.values(plannedCourses)
+      .flat()
+      .some((plannedCourse) => plannedCourse.id === course.id)
+
+    if (courseIsAlreadyPlanned) {
+      setPlannerMessage(`${course.courseCode} is already in your plan.`)
+      return
+    }
+
     setPlannedCourses((current) => {
-      const courseIsAlreadyPlanned = Object.values(current)
-        .flat()
-        .some((plannedCourse) => plannedCourse.id === course.id)
-
-      if (courseIsAlreadyPlanned) {
-        return current
-      }
-
       const currentTermCourses = current[selectedTerm] ?? []
 
       return {
@@ -47,6 +49,10 @@ function Dashboard() {
         [selectedTerm]: [...currentTermCourses, course],
       }
     })
+
+    setPlannerMessage(
+      `${course.courseCode} was added to ${formatTermLabel(selectedTerm)}.`,
+    )
   }
 
   const handleRemoveCourse = (termKey: string, courseId: string) => {
@@ -165,7 +171,11 @@ function Dashboard() {
             ))}
           </nav>
           <div className="planner-caption"><span>Select a term, then add matching courses from search.</span><span className="legend-button"><span aria-hidden="true">ⓘ</span> Click a term to choose it</span></div>
-
+          {plannerMessage && (
+            <p className="planner-message" aria-live="polite">
+              {plannerMessage}
+            </p>
+          )}
           <div className="year-list">
             {years.map((year) => (
               <section className="year-section" aria-labelledby={`year-${year}`} key={year}>
