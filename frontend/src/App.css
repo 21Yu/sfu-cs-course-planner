@@ -104,3 +104,24 @@
   .term-button { align-self: flex-start; }
   .term-card-heading h3 { font-size: 10px; }
 }
+.planned-course {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.remove-course-button {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove-course-button:hover,
+.remove-course-button:focus-visible {
+  color: #a33b3b;
+}

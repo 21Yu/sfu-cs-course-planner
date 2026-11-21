@@ -49,6 +49,19 @@ function Dashboard() {
     })
   }
 
+  const handleRemoveCourse = (termKey: string, courseId: string) => {
+    setPlannedCourses((current) => {
+      const updatedCourses = (current[termKey] ?? []).filter(
+        (course) => course.id !== courseId,
+      )
+
+      return {
+        ...current,
+        [termKey]: updatedCourses,
+      }
+    })
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -126,7 +139,24 @@ function Dashboard() {
                       }}>
                         <div className="term-card-heading"><h3>{term}</h3><span>{term === 'Fall' ? 'Sep – Dec' : term === 'Spring' ? 'Jan – Apr' : 'May – Aug'}</span></div>
                         <div className="term-dropzone">
-                          {courses.length === 0 ? <><span className="plus-mark" aria-hidden="true">+</span><span>{selectedTerm === key ? 'Selected for courses' : 'Choose term'}</span></> : courses.map((course) => <span className="planned-course" key={course.id}>{course.courseCode}</span>)}
+                          {courses.length === 0 ? <><span className="plus-mark" aria-hidden="true">+</span><span>{selectedTerm === key ? 'Selected for courses' : 'Choose term'}</span></> : 
+                            courses.map((course) => (
+                              <div className="planned-course" key={course.id}>
+                                <span>{course.courseCode}</span>
+                                <button
+                                  type="button"
+                                  className="remove-course-button"
+                                  aria-label={`Remove ${course.courseCode} from ${term}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleRemoveCourse(key, course.id)
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))
+                          }
                         </div>
                         <div className="term-units">{units} units</div>
                       </div>
