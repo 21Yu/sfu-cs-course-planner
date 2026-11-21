@@ -14,7 +14,7 @@ from ..services.sfu_courses import (
 )
 from ..db import get_db
 from ..models.courses import Course as CourseModel
-from ..schemas.course_responses import CourseSummary
+from ..schemas.course_responses import CourseSummary, CourseResponse
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -64,3 +64,19 @@ def search_courses(
 
     statement = statement.offset(offset)
     return db.execute(statement).scalars().all()
+
+@router.get("/{course_code}", response_model = CourseResponse)
+def get_course_details(
+    course_code: str,
+    db: Session = Depends(get_db)
+):
+    statement = select(CourseModel).where(
+        CourseModel.course_code == course_code
+    )
+
+    course = db.execute(statement).scalar_one_or_none()
+
+    if course is None:
+        raise HTTPException(status_code = 404, detail = "Course not found")
+
+    return course
