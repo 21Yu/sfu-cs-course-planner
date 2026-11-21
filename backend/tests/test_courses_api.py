@@ -202,5 +202,6 @@ def test_search_coursecode_with_prerequisites(client: TestClient, session_factor
         data = response.json()
 
         assert response.status_code == 200
+        assert len(data["prerequisites"]) == 2
         assert data["prerequisites"][0]["requiredCourse"]["courseCode"] == "MATH 152"
         assert data["prerequisites"][1]["requiredCourse"]["courseCode"] == "MATH 232"
