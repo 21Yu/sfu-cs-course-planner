@@ -18,12 +18,13 @@ const formatTermLabel = (key: string) => {
   const [, year, term] = key.split('-')
   return `Year ${year} · ${term[0].toUpperCase()}${term.slice(1)}`
 }
+type SemesterCourses = Record<string, Course[]>
 
 function Dashboard() {
   const [activeConcentration, setActiveConcentration] = useState(concentrations[0])
   const [years, setYears] = useState([1, 2, 3, 4])
   const [selectedTerm, setSelectedTerm] = useState(termKey(1, 'Fall'))
-  const [plannedCourses, setPlannedCourses] = useState<Record<string, Course[]>>({})
+  const [plannedCourses, setPlannedCourses] = useState<SemesterCourses>({})
 
   const plannedUnits = Object.values(plannedCourses)
     .flat()
