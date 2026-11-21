@@ -37,10 +37,10 @@ def get_courses(
         raise HTTPException(status_code=502, detail="Course data provider request failed") from exc
 
 
-@router.get("", response_model = list[CourseSummary], summary = "Search external course outlines")
+@router.get("", response_model = list[CourseSummary], summary = "Search courses")
 def search_courses(
-    q: str | None = None,
-    subject: str | None = None,
+    q: str | None = Query(default = None, min_length = 1, max_length = 100),
+    subject: str | None = Query(default = None, min_length = 2, max_length = 8),
     limit: int | None = Query(default = None, ge = 1, le = 500),
     offset: int = Query(default = 0, ge=0),
     db: Session = Depends(get_db)
