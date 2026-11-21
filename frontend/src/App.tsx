@@ -32,9 +32,20 @@ function Dashboard() {
 
   const handleSelectCourse = (course: Course) => {
     setPlannedCourses((current) => {
+      const courseIsAlreadyPlanned = Object.values(current)
+        .flat()
+        .some((plannedCourse) => plannedCourse.id === course.id)
+
+      if (courseIsAlreadyPlanned) {
+        return current
+      }
+
       const currentTermCourses = current[selectedTerm] ?? []
-      if (currentTermCourses.some((planned) => planned.id === course.id)) return current
-      return { ...current, [selectedTerm]: [...currentTermCourses, course] }
+
+      return {
+        ...current,
+        [selectedTerm]: [...currentTermCourses, course],
+      }
     })
   }
 
