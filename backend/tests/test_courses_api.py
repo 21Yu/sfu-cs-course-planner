@@ -102,7 +102,7 @@ def test_search_courses_limits_offsets(client: TestClient, session_factory):
         assert data[0]["courseCode"] == "MACM 316"
 
 def test_no_result_search(client: TestClient):
-    response = client.get("/api/courses")
+    response = client.get("/api/courses?q=nonexistantclass")
     data = response.json()
 
     assert response.status_code == 200
