@@ -7,7 +7,10 @@ PASSWORD = "correct horse battery"
 
 
 def sign_up(client, email):
-    response = client.post("/api/auth/register", json={"email": email, "password": PASSWORD})
+    response = client.post(
+        "/api/auth/register",
+        json={"email": email, "password": PASSWORD, "username": "Test user"},
+    )
     assert response.status_code == 201
     return response.json()["id"]
 
@@ -16,6 +19,22 @@ def create_plan(client, name="Graduate in 4 years", **extra):
     response = client.post("/api/plans", json={"name": name, **extra})
     assert response.status_code == 201
     return response.json()
+
+
+def create_course(session_factory, code="225", title="Data Structures"):
+    dept = "CMPT"
+    with session_factory() as db:
+        course = Course(
+            title=title,
+            course_code=f"{dept} {code}",
+            credits=3,
+            dept=dept,
+            number=code,
+        )
+        db.add(course)
+        db.commit()
+        db.refresh(course)
+        return course.id
 
 
 @pytest.fixture
@@ -202,3 +221,102 @@ def test_cannot_delete_another_users_plan(alice, bob):
 
     assert bob.delete(f"/api/plans/{plan['id']}").status_code == 404
     assert alice.get(f"/api/plans/{plan['id']}").status_code == 200
+
+
+# ---------- Courses in plans ----------
+
+
+def test_add_course_to_plan(alice, session_factory):
+    plan = create_plan(alice)
+    course_id = create_course(session_factory)
+
+    response = alice.post(
+        f"/api/plans/{plan['id']}/courses",
+        json={"courseId": course_id, "year": 1, "season": "fall"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["course"]["courseCode"] == "CMPT 225"
+    assert (body["year"], body["season"]) == (1, "fall")
+
+
+def test_cannot_add_duplicate_course_to_plan(alice, session_factory):
+    plan = create_plan(alice)
+    course_id = create_course(session_factory)
+    payload = {"courseId": course_id, "year": 1, "season": "fall"}
+
+    assert alice.post(f"/api/plans/{plan['id']}/courses", json=payload).status_code == 201
+    response = alice.post(f"/api/plans/{plan['id']}/courses", json=payload)
+
+    assert response.status_code == 409
+
+
+def test_add_course_rejects_unknown_course(alice):
+    plan = create_plan(alice)
+
+    response = alice.post(
+        f"/api/plans/{plan['id']}/courses",
+        json={"courseId": 99999, "year": 1, "season": "fall"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_course_slot(alice, session_factory):
+    plan = create_plan(alice)
+    course_id = create_course(session_factory)
+    added = alice.post(
+        f"/api/plans/{plan['id']}/courses",
+        json={"courseId": course_id, "year": 1, "season": "fall"},
+    ).json()
+
+    response = alice.patch(
+        f"/api/plans/{plan['id']}/courses/{added['id']}",
+        json={"year": 2, "season": "summer"},
+    )
+
+    assert response.status_code == 200
+    assert (response.json()["year"], response.json()["season"]) == (2, "summer")
+
+
+def test_update_and_delete_unknown_plan_course_return_404(alice):
+    plan = create_plan(alice)
+
+    assert alice.patch(
+        f"/api/plans/{plan['id']}/courses/99999",
+        json={"year": 2, "season": "spring"},
+    ).status_code == 404
+    assert alice.delete(
+        f"/api/plans/{plan['id']}/courses/99999"
+    ).status_code == 404
+
+
+def test_delete_course_from_plan(alice, session_factory):
+    plan = create_plan(alice)
+    course_id = create_course(session_factory)
+    added = alice.post(
+        f"/api/plans/{plan['id']}/courses",
+        json={"courseId": course_id, "year": 1, "season": "fall"},
+    ).json()
+
+    response = alice.delete(
+        f"/api/plans/{plan['id']}/courses/{added['id']}"
+    )
+
+    assert response.status_code == 204
+    detail = alice.get(f"/api/plans/{plan['id']}").json()
+    assert detail["planCourses"] == []
+
+
+def test_signed_out_cannot_access_plan_course_routes(client):
+    assert client.post("/api/plans/1/courses", json={
+        "courseId": 1,
+        "year": 1,
+        "season": "fall",
+    }).status_code == 401
+    assert client.patch(
+        "/api/plans/1/courses/1",
+        json={"year": 1, "season": "spring"},
+    ).status_code == 401
+    assert client.delete("/api/plans/1/courses/1").status_code == 401
