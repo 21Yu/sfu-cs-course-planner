@@ -1,4 +1,4 @@
-import type { Course } from '../../types/course'
+import type { Course } from '../../types/Course'
 
 export type Term = 'Fall' | 'Spring' | 'Summer'
 export type SemesterCourses = Record<string, Course[]>

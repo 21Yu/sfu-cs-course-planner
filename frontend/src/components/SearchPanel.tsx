@@ -1,6 +1,6 @@
 import { CourseSearch } from './CourseSearch/CourseSearch'
 import { formatTermLabel } from './planner/plannerUtils'
-import type { Course } from '../types/course'
+import type { Course } from '../types/Course'
 
 type SearchPanelProps = {
   selectedTerm: string

@@ -1,4 +1,4 @@
-import type { Course } from '../../types/course'
+import type { Course } from '../../types/Course'
 import { terms } from './constants'
 import type { SemesterCourses, SemesterOption, Term } from './types'
 

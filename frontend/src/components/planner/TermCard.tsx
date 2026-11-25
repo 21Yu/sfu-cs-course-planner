@@ -1,4 +1,4 @@
-import type { Course } from '../../types/course'
+import type { Course } from '../../types/Course'
 import { termDates } from './constants'
 import { getTotalUnits } from './plannerUtils'
 import type { SemesterOption, Term } from './types'
