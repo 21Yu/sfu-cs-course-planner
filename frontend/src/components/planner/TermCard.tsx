@@ -27,7 +27,18 @@ export function TermCard({
   const units = getTotalUnits(courses)
 
   return (
-    <section className={`term-card${isSelected ? ' selected' : ''}`}>
+    <section
+      className={`term-card${isSelected ? ' selected' : ''}`}
+      onClick={(event) => {
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.closest('button, select')
+        ) {
+          return
+        }
+        onSelect(semesterKey)
+      }}
+    >
       <div className="term-card-heading">
         <button
           type="button"
